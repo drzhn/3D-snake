@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class Snake : MonoBehaviour
 {
@@ -9,17 +11,17 @@ public class Snake : MonoBehaviour
     public GameObject bodyPrefab;
     public GameObject cornerPrefab;
 
-    public List<Vector3Int> segments = new List<Vector3Int>();
+    [NonSerialized] public LinkedList<Vector3Int> segments = new LinkedList<Vector3Int>();
 
     private GameField _field;
 
-    private Color color;
+    public Color color;
 
     public void Init(GameField field, Vector3Int initCoord)
     {
         color = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
         _field = field;
-        segments.Add(initCoord);
+        segments.AddFirst(initCoord);
         ReconstructBody();
     }
 
@@ -28,9 +30,12 @@ public class Snake : MonoBehaviour
         InvokeRepeating("RequestPath", 1, 0.3f);
     }
 
+    /// <summary>
+    /// Запрашиваем новый путь
+    /// </summary>
     void RequestPath()
     {
-        _field.grid.RequestPath(segments[0], _field.appleCoord, ref path);
+        _field.grid.RequestPath(segments.First.Value, _field.appleCoord, ref path);
         if (path == null)
         {
             _field.SnakeCantFindPath(this);
@@ -40,14 +45,15 @@ public class Snake : MonoBehaviour
         //print(path.Count);
         if (path.Count >= 2)
         {
-            segments.Insert(0, path[path.Count - 2].coords);
+            // Если путь найден, то мы ставим голову змейки по этому пути, а хвост удаляем
+            segments.AddFirst(path[path.Count - 2].coords);
             if (path.Count == 2)
             {
-                _field.SnakeEatsApple(this);
+                _field.SnakeEatsApple(this); // 
             }
             else
             {
-                segments.RemoveAt(segments.Count - 1);
+                segments.RemoveLast();
             }
         }
 
@@ -56,58 +62,65 @@ public class Snake : MonoBehaviour
 
     List<GameObject> bodyParts = new List<GameObject>();
 
+    /// <summary>
+    /// Перестройка тела змейки
+    /// </summary>
     void ReconstructBody()
     {
+        // каждый раз, когда вызывается эта функция, мы удаляем предыдущее тело и заново строим из кусочков новое. 
+        // это дорогая операция, которую в будущем можно будет заменить на Object Pooling
+        // решил оставить как есть, тк к задаче это не относится
         bodyParts.ForEach(Destroy);
         bodyParts.Clear();
         if (segments.Count == 1)
         {
-            var part = Instantiate(onlyHeadPrefab, segments[0], Quaternion.identity);
+            var part = Instantiate(onlyHeadPrefab, segments.First.Value, Quaternion.identity);
             part.transform.SetParent(transform);
             bodyParts.Add(part);
         }
         else
         {
-            for (var i = 0; i < segments.Count; i++)
+            LinkedListNode<Vector3Int> current = segments.First;
+            while (current != null)
             {
-                if (i == 0)
+                if (current == segments.First)
                 {
-                    var part = Instantiate(headPrefab, segments[i], Quaternion.identity);
-                    part.transform.forward = segments[1] - segments[0];
+                    var part = Instantiate(headPrefab, current.Value, Quaternion.identity);
+                    part.transform.forward = current.Next.Value - current.Value;
                     part.transform.SetParent(transform);
                     bodyParts.Add(part);
-                    continue;
                 }
 
-                if (i == segments.Count - 1)
+                if (current == segments.Last)
                 {
-                    var part = Instantiate(headPrefab, segments[i], Quaternion.identity);
-                    part.transform.forward = segments[segments.Count - 2] - segments[segments.Count - 1];
+                    var part = Instantiate(headPrefab, current.Value, Quaternion.identity);
+                    part.transform.forward = current.Previous.Value - current.Value;
                     part.transform.SetParent(transform);
                     bodyParts.Add(part);
-                    continue;
                 }
 
-                if (segments.Count <= 2) continue;
-                if (Vector3.Angle(segments[i - 1] - segments[i], segments[i + 1] - segments[i]) > 100)
+                if (current.Next != null && current.Previous != null)
                 {
-                    var part = Instantiate(bodyPrefab, segments[i], Quaternion.identity);
-                    part.transform.forward = segments[i - 1] - segments[i + 1];
-                    part.transform.SetParent(transform);
-                    bodyParts.Add(part);
-                    continue;
-                }
-                else
-                {
-                    var part = Instantiate(cornerPrefab, segments[i], Quaternion.identity);
-                    part.transform.rotation = Quaternion.LookRotation(
-                        segments[i] - segments[i + 1],
-                        -Vector3.Cross(segments[i - 1] - segments[i], segments[i + 1] - segments[i])
-                    );
+                    if (Vector3.Angle(current.Previous.Value - current.Value, current.Next.Value - current.Value) > 100)
+                    {
+                        var part = Instantiate(bodyPrefab, current.Value, Quaternion.identity);
+                        part.transform.forward = current.Previous.Value - current.Next.Value;
+                        part.transform.SetParent(transform);
+                        bodyParts.Add(part);
+                    }
+                    else
+                    {
+                        var part = Instantiate(cornerPrefab, current.Value, Quaternion.identity);
+                        part.transform.rotation = Quaternion.LookRotation(
+                            current.Value - current.Next.Value,
+                            -Vector3.Cross(current.Previous.Value - current.Value, current.Next.Value - current.Value)
+                        );
 
-                    part.transform.SetParent(transform);
-                    bodyParts.Add(part);
+                        part.transform.SetParent(transform);
+                        bodyParts.Add(part);
+                    }
                 }
+                current = current.Next;
             }
         }
 

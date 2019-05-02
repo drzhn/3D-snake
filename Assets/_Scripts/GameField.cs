@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,14 +10,15 @@ public class GameField : MonoBehaviour
     public uint height = 15;
     public uint depth = 15;
 
-    public GameObject pointPrefab;
     public GameObject applePrefab;
     public GameObject snakePrefab;
 
+    [NonSerialized]
     public Grid grid;
+    [NonSerialized]
     public Vector3Int appleCoord;
     private GameObject appleObj;
-    public List<Snake> snakes = new List<Snake>();
+    private List<Snake> snakes = new List<Snake>();
 
     void Awake()
     {
@@ -33,29 +35,6 @@ public class GameField : MonoBehaviour
         grid = new Grid(width, height, depth, snakes);
         appleCoord = grid.RequestNewAppleCoord();
         appleObj = Instantiate(applePrefab, appleCoord, Quaternion.identity);
-//        foreach (var node in grid.NeighborOf(new Node(){coords = new Vector3Int(1, 1, 1)}))
-//        {
-//            print(node);
-//        }
-        //path = grid.AStar(new Vector3Int(1, 1, 1), new Vector3Int(4, 4, 4));
-        //print(path.Count);
-//        HashSet<Node> nodes = new HashSet<Node>()
-//        {
-//            new Node() {g = 0, h = 0},
-//        };
-//        nodes.Add(new Node() {g = 0, h = 0});
-        //print(nodes.Count);
-//        for (int i = 0; i < width; i++)
-//        {
-//            for (int j = 0; j < height; j++)
-//            {
-//                for (int k = 0; k < depth; k++)
-//                {
-//                    GameObject point = Instantiate(pointPrefab, new Vector3(i, j, k), Quaternion.identity);
-//                    point.transform.SetParent(transform);
-//                }
-//            }
-//        }
     }
 
     public void SnakeEatsApple(Snake s)

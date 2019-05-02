@@ -19,9 +19,10 @@ public class Grid
         this.snakes = snakes;
     }
 
+    // Реализация A*, представленная здесь: https://en.wikibooks.org/wiki/Artificial_Intelligence/Search/Heuristic_search/Astar_Search
     public void RequestPath(Vector3Int startCoord, Vector3Int goalCoord, ref List<Node> path)
     {
-        if (path.Count > 2)
+        if (path.Count > 2) // проверка необходимости перестраивать путь
         {
             path.RemoveAt(path.Count - 1);
             if (path.TrueForAll(node => snakes.TrueForAll(snake => !snake.segments.Contains(node.coords))))
@@ -56,29 +57,29 @@ public class Grid
             foreach (var y in neighbors)
             {
                 if (closedset.Contains(y)) continue;
-                int tentative_g_score = x.g + 1; //ManhattanDistance(x.coords, y.coords);
-                bool tentative_is_better = false;
+                int candidateGScore = x.g + 1; // расстояние между соседями всегда 1
+                bool isCandidateBetter = false;
                 if (!openset.Contains(y))
                 {
                     openset.Add(y);
-                    tentative_is_better = true;
+                    isCandidateBetter = true;
                 }
                 else
                 {
-                    if (tentative_g_score < y.g)
+                    if (candidateGScore < y.g)
                     {
-                        tentative_is_better = true;
+                        isCandidateBetter = true;
                     }
                     else
                     {
-                        tentative_is_better = false;
+                        isCandidateBetter = false;
                     }
                 }
 
-                if (tentative_is_better)
+                if (isCandidateBetter)
                 {
                     y.cameFrom = x;
-                    y.g = tentative_g_score;
+                    y.g = candidateGScore;
                     y.h = ManhattanDistance(y.coords, goalCoord);
                 }
             }
@@ -87,8 +88,9 @@ public class Grid
         path = null;
     }
 
-    public HashSet<Node> NeighborOf(Node node, bool full = false)
+    private HashSet<Node> NeighborOf(Node node, bool full = false)
     {
+        // Так как мы изначально не строим весь граф, сосдеями будут считаться те клетки, координаты которых не содержатся в списке координат змеек
         HashSet<Node> ret = new HashSet<Node>();
 
         if (node.coords.x >= 1)
@@ -136,13 +138,22 @@ public class Grid
         return ret;
     }
 
+    /// <summary>
+    /// Функция оценки расстояния между клетками - это манхэттенское расстояние
+    /// </summary>
     private static int ManhattanDistance(Vector3Int a, Vector3Int b)
     {
         return Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y) + Math.Abs(a.z - b.z);
     }
 
+    /// <summary>
+    /// Получение новой координаты для яблока
+    /// </summary>
     public Vector3Int RequestNewAppleCoord()
     {
+        // координата должна находиться на свободной клетке, поэтому мы возьмем случайную и будем перебирать всех соседей
+        // а затем и их соседей, пока не найдем свободную
+
         Node randomNode = new Node()
         {
             coords = new Vector3Int(

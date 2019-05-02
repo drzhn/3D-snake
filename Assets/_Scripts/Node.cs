@@ -10,6 +10,8 @@ public class Node : IEquatable<Node>, IComparable<Node>
     public int f => g + h;
     public Node cameFrom;
 
+    // переопредил операцию сравнения и равенства, чтобы List.Contains(node) возвращал true
+    // если не объект находится в списке, а объект с такими же координатами 
     public bool Equals(Node obj)
     {
         return coords == obj?.coords;
@@ -42,17 +44,6 @@ public class Node : IEquatable<Node>, IComparable<Node>
     {
         if (f > other.f) return 1;
         if (f < other.f) return -1;
-        return 0;
-    }
-}
-
-
-public class NodeComparer : IComparer<Node>
-{
-    public int Compare(Node x, Node y)
-    {
-        if (x.f > y.f) return 1;
-        if (x.f < y.f) return -1;
         return 0;
     }
 }
